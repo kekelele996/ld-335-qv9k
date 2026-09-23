@@ -20,4 +20,5 @@ const (
 	CodeSettleInvalid    = 1402
 	CodeReverseNotToday  = 1403
 	CodeReverseAlready   = 1404
+	CodeSettleRequestConflict = 1405 // 同一 request_no 绑定了不同预结算（幂等键冲突）
 )

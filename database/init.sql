@@ -67,6 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_preset_batch ON presettlements(batch_id);
 CREATE TABLE IF NOT EXISTS settlement_orders (
     id BIGSERIAL PRIMARY KEY,
     settlement_no VARCHAR(32) UNIQUE NOT NULL,
+    request_no VARCHAR(64) DEFAULT NULL,
     batch_id BIGINT NOT NULL,
     insured_person_id BIGINT NOT NULL,
     presettlement_id BIGINT NOT NULL,
@@ -78,6 +79,8 @@ CREATE TABLE IF NOT EXISTS settlement_orders (
     reversed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+-- 幂等键：同一调用方（ApiClient）的同一 request_no 只能开出一张结算单（NULL 不参与去重）。
+CREATE UNIQUE INDEX IF NOT EXISTS idx_order_client_request ON settlement_orders(client_id, request_no);
 CREATE INDEX IF NOT EXISTS idx_order_client ON settlement_orders(client_id, status);
 
 CREATE TABLE IF NOT EXISTS daily_reconciliations (

@@ -108,6 +108,9 @@ func migrateAndSeed(db *gorm.DB, cfg config.Config, log *slog.Logger) error {
 	}
 	if tableCount > 0 {
 		// init.sql 已建表：修复种子调用方的 API Key 哈希（与当前 API_KEY_SECRET 一致）
+		if err := ensureSettlementRequestNo(db); err != nil {
+			return err
+		}
 		return syncDemoClientHashes(db, cfg)
 	}
 	if err := db.AutoMigrate(
@@ -136,6 +139,21 @@ func migrateAndSeed(db *gorm.DB, cfg config.Config, log *slog.Logger) error {
 	}
 	log.Info(constants.LOG_DB_INITIALIZED, "seed", "ok")
 	return syncDemoClientHashes(db, cfg)
+}
+
+// ensureSettlementRequestNo 老库升级：补齐 settlement_orders.request_no 列与
+// (client_id, request_no) 幂等唯一索引；全新库（init.sql / AutoMigrate）下为空操作。
+func ensureSettlementRequestNo(db *gorm.DB) error {
+	if err := db.Exec(`
+		ALTER TABLE settlement_orders ADD COLUMN IF NOT EXISTS request_no VARCHAR(64) DEFAULT NULL`).Error; err != nil {
+		return fmt.Errorf("add settlement_orders.request_no: %w", err)
+	}
+	if err := db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_order_client_request
+		ON settlement_orders(client_id, request_no)`).Error; err != nil {
+		return fmt.Errorf("create idx_order_client_request: %w", err)
+	}
+	return nil
 }
 
 // syncDemoClientHashes 确保演示调用方使用当前 API_KEY_SECRET 生成的哈希（init.sql 占位哈希不匹配）。

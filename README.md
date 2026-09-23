@@ -155,9 +155,10 @@ curl -s -X POST $BASE/api/v1/fees/upload -H "X-API-Key: $API_KEY" -H "Authorizat
 curl -s -X POST $BASE/api/v1/presettlements/calculate -H "X-API-Key: $API_KEY" -H "Authorization: Bearer $SVC_TOKEN" \
   -H 'Content-Type: application/json' -d '{"batch_id":1}'
 
-# 7. 正式结算（presettlement_id 取上一步返回）
+# 7. 正式结算（presettlement_id 取上一步返回；request_no 为 HIS 请求流水号）
+#    超时重试时务必沿用同一个 request_no：按调用方幂等，返回原 settlement_no 与状态，不重复开单。
 curl -s -X POST $BASE/api/v1/settlements/submit -H "X-API-Key: $API_KEY" -H "Authorization: Bearer $SVC_TOKEN" \
-  -H 'Content-Type: application/json' -d '{"presettlement_id":1}'
+  -H 'Content-Type: application/json' -d '{"presettlement_id":1,"request_no":"HIS20260923001"}'
 
 # 8. 结算冲正（settlement_no 取上一步返回）
 curl -s -X POST $BASE/api/v1/settlements/{SETTLEMENT_NO}/reverse \

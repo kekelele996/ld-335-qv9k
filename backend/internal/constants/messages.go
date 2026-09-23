@@ -21,6 +21,7 @@ const (
 	MsgPresettleNotFound      = "预结算记录（Presettlement）不存在"
 	MsgSettlementNotFound     = "结算单（SettlementOrder）不存在"
 	MsgSettlementNoUnique     = "结算单号（SettlementOrder.settlement_no）生成冲突"
+	MsgSettlementRequestConflict = "结算请求流水号（SettlementOrder.request_no）已绑定其他预结算（Presettlement），幂等冲突，禁止换用"
 	MsgReverseNotToday        = "仅支持当日结算冲正（SettlementOrder）"
 	MsgReverseAlready         = "结算单（SettlementOrder）已冲正，禁止重复操作"
 	MsgRateLimited            = "请求频率超出调用方（ApiClient.rate_limit_qps）限制"

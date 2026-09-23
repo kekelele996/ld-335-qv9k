@@ -2,9 +2,11 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/blueship581/gbinsureapi/internal/model"
 	"github.com/blueship581/gbinsureapi/internal/util"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -16,9 +18,38 @@ func NewSettlementOrderRepository(db *gorm.DB) *SettlementOrderRepository {
 	return &SettlementOrderRepository{db: db}
 }
 
-// Create 创建结算单。
+// ErrRequestNoConflict request_no 幂等键唯一冲突（并发或跨实例重复提交）。
+var ErrRequestNoConflict = errors.New("settlement order request_no unique conflict")
+
+// Create 创建结算单；命中 (client_id, request_no) 唯一索引时返回 ErrRequestNoConflict。
 func (r *SettlementOrderRepository) Create(order *model.SettlementOrder) error {
-	return r.db.Create(order).Error
+	err := r.db.Create(order).Error
+	if err != nil && IsDuplicateKeyErr(err) {
+		return ErrRequestNoConflict
+	}
+	return err
+}
+
+// IsDuplicateKeyErr 判断数据库唯一约束冲突（PostgreSQL 23505 / SQLite UNIQUE）。
+func IsDuplicateKeyErr(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate key") || strings.Contains(msg, "unique constraint failed")
+}
+
+// FindByClientAndRequest 按调用方与请求流水号查询首次结算结果（幂等键）。
+func (r *SettlementOrderRepository) FindByClientAndRequest(clientID uint, requestNo string) (*model.SettlementOrder, error) {
+	var order model.SettlementOrder
+	if err := r.db.Where("client_id = ? AND request_no = ?", clientID, requestNo).First(&order).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, util.ErrNotFound
+		}
+		return nil, err
+	}
+	return &order, nil
 }
 
 // FindByNo 按结算单号查询。

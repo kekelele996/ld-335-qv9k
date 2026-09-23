@@ -22,6 +22,7 @@ const (
 	LOG_PRESETTLEMENT_FAILED       = "Presettlement calculation failed"
 	LOG_SETTLEMENT_SUBMITTED       = "SettlementOrder submitted"
 	LOG_SETTLEMENT_FAILED          = "SettlementOrder submit failed"
+	LOG_SETTLEMENT_IDEMPOTENT_REPLAY = "SettlementOrder submit replayed by request_no (idempotent)"
 	LOG_SETTLEMENT_REVERSED        = "SettlementOrder reversed"
 	LOG_SETTLEMENT_REVERSE_FAILED  = "SettlementOrder reverse failed"
 	LOG_RECONCILIATION_GENERATED   = "DailyReconciliation generated"

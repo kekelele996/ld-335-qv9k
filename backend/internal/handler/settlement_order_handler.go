@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/blueship581/gbinsureapi/internal/dto"
 	"github.com/blueship581/gbinsureapi/internal/middleware"
+	"github.com/blueship581/gbinsureapi/internal/repository"
 	"github.com/blueship581/gbinsureapi/internal/service"
 	"github.com/blueship581/gbinsureapi/internal/util"
 	"github.com/gin-gonic/gin"
@@ -29,22 +32,38 @@ func NewSettlementOrderHandler(svc *service.SettlementService, log *slog.Logger)
 // @Produce json
 // @Security ApiKeyAuth
 // @Security BearerAuth
-// @Param body body dto.SubmitSettlementRequest true "预结算 ID"
+// @Param body body dto.SubmitSettlementRequest true "预结算 ID 与请求流水号 request_no（同号重试幂等）"
 // @Success 201 {object} util.Response
+// @Success 200 {object} util.Response
 // @Router /api/v1/settlements/submit [post]
 func (h *SettlementOrderHandler) Submit(c *gin.Context) {
 	var req dto.SubmitSettlementRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(util.BadRequest("结算参数（SettlementOrder）不合法", err))
+		c.Error(util.BadRequest(fmt.Sprintf("结算参数（SettlementOrder[request_no=%s]）不合法", req.RequestNo), err))
 		return
 	}
 	clientID, _ := c.Get(middleware.ClientIDKey)
-	order, err := h.svc.SubmitSettlement(c.Request.Context(), clientID.(uint), req.PresettlementID)
+	order, created, err := h.svc.SubmitSettlement(c.Request.Context(), clientID.(uint), req.PresettlementID, req.RequestNo)
 	if err != nil {
-		c.Error(err)
+		// handler 层再次包装 service 错误（屎山耦合点：错误层层透传）；AppError 已携带码与状态，原样上抛。
+		var appErr *util.AppError
+		if errors.As(err, &appErr) {
+			c.Error(err)
+			return
+		}
+		if errors.Is(err, repository.ErrRequestNoConflict) {
+			c.Error(util.ConflictError("SettlementOrder[request_no="+req.RequestNo+"] submit failed: idempotency conflict", err))
+			return
+		}
+		c.Error(fmt.Errorf("SettlementOrder[request_no=%s] submit failed: %w", req.RequestNo, err))
 		return
 	}
-	util.Created(c, order)
+	// created=false 表示同 request_no 重试命中首次结果：返回原单，HTTP 200；首次开单 201。
+	if created {
+		util.Created(c, order)
+		return
+	}
+	util.OK(c, order)
 }
 
 // Reverse 结算冲正。

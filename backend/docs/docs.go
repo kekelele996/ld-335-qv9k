@@ -831,11 +831,17 @@ const docTemplate = `{
         "github_com_blueship581_gbinsureapi_internal_dto.SubmitSettlementRequest": {
             "type": "object",
             "required": [
-                "presettlement_id"
+                "presettlement_id",
+                "request_no"
             ],
             "properties": {
                 "presettlement_id": {
                     "type": "integer"
+                },
+                "request_no": {
+                    "maxLength": 64,
+                    "type": "string",
+                    "description": "调用方请求流水号（HIS 超时重试保持不变），按调用方做幂等；同号重试返回原 settlement_no 与状态"
                 }
             }
         },
