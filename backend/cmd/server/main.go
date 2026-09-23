@@ -107,6 +107,10 @@ func migrateAndSeed(db *gorm.DB, cfg config.Config, log *slog.Logger) error {
 		return err
 	}
 	if tableCount > 0 {
+		// init.sql 已建表：先补齐正式结算幂等键，再修复种子调用方的 API Key 哈希
+		if err := migrateSettlementRequestNo(db); err != nil {
+			return err
+		}
 		// init.sql 已建表：修复种子调用方的 API Key 哈希（与当前 API_KEY_SECRET 一致）
 		return syncDemoClientHashes(db, cfg)
 	}
@@ -114,6 +118,10 @@ func migrateAndSeed(db *gorm.DB, cfg config.Config, log *slog.Logger) error {
 		&model.ApiClient{}, &model.InsuredPerson{}, &model.UploadBatch{}, &model.FeeItem{},
 		&model.Presettlement{}, &model.SettlementOrder{}, &model.DailyReconciliation{}, &model.AuditLog{},
 	); err != nil {
+		return err
+	}
+	// 幂等兜底：AutoMigrate 异常未补齐时确保 (client_id, request_no) 幂等键存在
+	if err := migrateSettlementRequestNo(db); err != nil {
 		return err
 	}
 	// 种子调用方（管理端演示）
@@ -138,11 +146,19 @@ func migrateAndSeed(db *gorm.DB, cfg config.Config, log *slog.Logger) error {
 	return syncDemoClientHashes(db, cfg)
 }
 
+// migrateSettlementRequestNo 为旧库补齐结算单 request_no 列与 (client_id, request_no) 幂等唯一索引。
+func migrateSettlementRequestNo(db *gorm.DB) error {
+	if err := db.Exec("ALTER TABLE settlement_orders ADD COLUMN IF NOT EXISTS request_no VARCHAR(64) NOT NULL DEFAULT ''").Error; err != nil {
+		return err
+	}
+	return db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_order_client_request ON settlement_orders(client_id, request_no)").Error
+}
+
 // syncDemoClientHashes 确保演示调用方使用当前 API_KEY_SECRET 生成的哈希（init.sql 占位哈希不匹配）。
 func syncDemoClientHashes(db *gorm.DB, cfg config.Config) error {
 	demo := []struct {
-		name  string
-		key   string
+		name string
+		key  string
 	}{
 		{name: "演示医院 HIS", key: "ak_demo_his"},
 		{name: "第三方药房", key: "ak_demo_third"},

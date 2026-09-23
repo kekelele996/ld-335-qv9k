@@ -114,7 +114,7 @@ ld-335/
 | GET | `/api/v1/batches/:id` | X-API-Key + JWT | 上传批次详情 |
 | POST | `/api/v1/presettlements/calculate` | X-API-Key + JWT | 预结算计算 |
 | GET | `/api/v1/presettlements` | X-API-Key + JWT | 批次预结算记录 |
-| POST | `/api/v1/settlements/submit` | X-API-Key + JWT | 正式结算提交 |
+| POST | `/api/v1/settlements/submit` | X-API-Key + JWT | 正式结算提交（按调用方 + request_no 幂等） |
 | POST | `/api/v1/settlements/:settlement_no/reverse` | X-API-Key + JWT | 结算冲正 |
 | GET | `/api/v1/settlements` | X-API-Key + JWT | 结算单列表 |
 | GET | `/api/v1/settlements/:settlement_no` | X-API-Key + JWT | 结算单详情 |
@@ -122,6 +122,15 @@ ld-335/
 | GET | `/api/v1/reconciliations` | X-API-Key + JWT | 对账记录列表 |
 
 > 所有请求响应头均携带 `X-Request-ID`，日志按请求 ID 串联；业务接口统一返回 `{code, message, data}`。
+
+### 正式结算幂等（request_no）
+
+正式结算请求体必须携带调用方请求流水号 `request_no`，服务端按 **调用方（ApiClient）+ request_no** 记忆首次结算结果（数据库唯一索引 `uq_order_client_request` 兜底）：
+
+- **超时重试**：HIS 用同一个 `request_no` 重试时不再新开结算单，直接回放首次的 `settlement_no` 与状态（首提返回 `201`，重放返回 `200`），日终金额不重复累计。
+- **并发提交**：同一调用方多个并发请求携带相同 `request_no` 时只有一张结算单落库，其余请求回放该单。
+- **换单冲突**：同一个 `request_no` 改指向另一条 `presettlement_id` 时返回 `409`（错误码 `1405`），禁止用旧流水号换预结算重提。
+- **冲正后重试**：结算单冲正（`reversed`）后用原 `request_no` 重试，仍返回原结算单与 `reversed` 状态，不会重新开单。
 
 ## API 调用示例（curl）
 
@@ -155,9 +164,10 @@ curl -s -X POST $BASE/api/v1/fees/upload -H "X-API-Key: $API_KEY" -H "Authorizat
 curl -s -X POST $BASE/api/v1/presettlements/calculate -H "X-API-Key: $API_KEY" -H "Authorization: Bearer $SVC_TOKEN" \
   -H 'Content-Type: application/json' -d '{"batch_id":1}'
 
-# 7. 正式结算（presettlement_id 取上一步返回）
+# 7. 正式结算（presettlement_id 取上一步返回；request_no 为 HIS 请求流水号，超时重试必须保持不变）
 curl -s -X POST $BASE/api/v1/settlements/submit -H "X-API-Key: $API_KEY" -H "Authorization: Bearer $SVC_TOKEN" \
-  -H 'Content-Type: application/json' -d '{"presettlement_id":1}'
+  -H 'Content-Type: application/json' \
+  -d '{"presettlement_id":1,"request_no":"HIS20260923000001"}'
 
 # 8. 结算冲正（settlement_no 取上一步返回）
 curl -s -X POST $BASE/api/v1/settlements/{SETTLEMENT_NO}/reverse \

@@ -624,7 +624,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "确认预结算后生成唯一结算单号并返回凭证信息",
+                "description": "确认预结算后生成唯一结算单号并返回凭证信息；按调用方 + request_no 幂等，超时重试与并发提交回放首单，换预结算重提返回 409",
                 "consumes": [
                     "application/json"
                 ],
@@ -637,7 +637,7 @@ const docTemplate = `{
                 "summary": "正式结算",
                 "parameters": [
                     {
-                        "description": "预结算 ID",
+                        "description": "预结算 ID 与调用方请求流水号 request_no",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -647,6 +647,12 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    },
                     "201": {
                         "description": "Created",
                         "schema": {
@@ -831,11 +837,15 @@ const docTemplate = `{
         "github_com_blueship581_gbinsureapi_internal_dto.SubmitSettlementRequest": {
             "type": "object",
             "required": [
-                "presettlement_id"
+                "presettlement_id",
+                "request_no"
             ],
             "properties": {
                 "presettlement_id": {
                     "type": "integer"
+                },
+                "request_no": {
+                    "type": "string"
                 }
             }
         },

@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS settlement_orders (
     insured_person_id BIGINT NOT NULL,
     presettlement_id BIGINT NOT NULL,
     client_id BIGINT NOT NULL,
+    request_no VARCHAR(64) NOT NULL DEFAULT '',
     status VARCHAR(20) DEFAULT 'presettled',
     total_amount DOUBLE PRECISION DEFAULT 0,
     insurance_pay_amount DOUBLE PRECISION DEFAULT 0,
@@ -79,6 +80,12 @@ CREATE TABLE IF NOT EXISTS settlement_orders (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_order_client ON settlement_orders(client_id, status);
+-- 正式结算幂等键：同一调用方的 request_no 只允许生成一张结算单（重试/并发复用首单）
+CREATE UNIQUE INDEX IF NOT EXISTS uq_order_client_request ON settlement_orders(client_id, request_no);
+
+-- 旧库迁移：为已存在的 settlement_orders 补齐幂等列与唯一索引
+ALTER TABLE settlement_orders ADD COLUMN IF NOT EXISTS request_no VARCHAR(64) NOT NULL DEFAULT '';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_order_client_request ON settlement_orders(client_id, request_no);
 
 CREATE TABLE IF NOT EXISTS daily_reconciliations (
     id BIGSERIAL PRIMARY KEY,

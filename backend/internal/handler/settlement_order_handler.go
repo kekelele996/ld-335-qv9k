@@ -23,14 +23,15 @@ func NewSettlementOrderHandler(svc *service.SettlementService, log *slog.Logger)
 
 // Submit 正式结算。
 // @Summary 正式结算
-// @Description 确认预结算后生成唯一结算单号并返回凭证信息
+// @Description 确认预结算后生成唯一结算单号并返回凭证信息；按调用方 + request_no 幂等，超时重试与并发提交回放首单，换预结算重提返回 409
 // @Tags settlements
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Security BearerAuth
-// @Param body body dto.SubmitSettlementRequest true "预结算 ID"
+// @Param body body dto.SubmitSettlementRequest true "预结算 ID 与调用方请求流水号 request_no"
 // @Success 201 {object} util.Response
+// @Success 200 {object} util.Response
 // @Router /api/v1/settlements/submit [post]
 func (h *SettlementOrderHandler) Submit(c *gin.Context) {
 	var req dto.SubmitSettlementRequest
@@ -39,9 +40,14 @@ func (h *SettlementOrderHandler) Submit(c *gin.Context) {
 		return
 	}
 	clientID, _ := c.Get(middleware.ClientIDKey)
-	order, err := h.svc.SubmitSettlement(c.Request.Context(), clientID.(uint), req.PresettlementID)
+	order, replayed, err := h.svc.SubmitSettlement(c.Request.Context(), clientID.(uint), req.PresettlementID, req.RequestNo)
 	if err != nil {
 		c.Error(err)
+		return
+	}
+	if replayed {
+		// 重试/并发命中首次结果：不新增结算单，回放原 settlement_no 与状态（含 reversed）
+		util.OK(c, order)
 		return
 	}
 	util.Created(c, order)
