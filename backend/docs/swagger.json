@@ -1,0 +1,914 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "为医院信息系统提供标准化的医保结算接口服务：参保人身份核验、费用上传、预结算、正式结算、结算单查询与日终对账。业务接口需 API Key（X-API-Key）与 JWT（Authorization: Bearer）双认证。",
+        "title": "医保智能结算 API 网关",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:19935",
+    "basePath": "/api/v1",
+    "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "网关管理员登录，返回管理端 JWT（用于调用方管理接口）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "管理员登录",
+                "parameters": [
+                    {
+                        "description": "登录参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_dto.AdminLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/batches": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "batches"
+                ],
+                "summary": "上传批次列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "调用方 ID",
+                        "name": "client_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/batches/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "batches"
+                ],
+                "summary": "批次详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "批次 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/clients": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "clients"
+                ],
+                "summary": "调用方列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "注册 HIS/第三方调用方，返回明文 API Key（仅此一次）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clients"
+                ],
+                "summary": "创建调用方",
+                "parameters": [
+                    {
+                        "description": "调用方参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_dto.CreateClientRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/clients/token": {
+            "post": {
+                "description": "调用方使用 X-API-Key 换取服务 JWT（业务接口需 API Key + JWT 双认证）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clients"
+                ],
+                "summary": "换取服务令牌",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/clients/verify": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "接收身份证号与医保卡号，返回参保状态、参保地、医保类型、个人账户余额",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "insured"
+                ],
+                "summary": "参保人身份核验",
+                "parameters": [
+                    {
+                        "description": "核验参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_dto.VerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/clients/{id}/status": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "clients"
+                ],
+                "summary": "更新调用方状态",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "调用方 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "状态",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_dto.UpdateClientStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/fees/items": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "fees"
+                ],
+                "summary": "批次费用明细",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "批次 ID",
+                        "name": "batch_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/fees/upload": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "接收就诊费用明细，校验格式与重复性，生成上传批次号",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fees"
+                ],
+                "summary": "费用明细上传",
+                "parameters": [
+                    {
+                        "description": "费用明细",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_dto.UploadFeesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/insured-persons": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "insured"
+                ],
+                "summary": "参保人列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/presettlements": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "presettlements"
+                ],
+                "summary": "批次预结算记录",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "批次 ID",
+                        "name": "batch_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/presettlements/calculate": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按医保目录与参保地政策返回分项明细，支持多次比对",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "presettlements"
+                ],
+                "summary": "预结算计算",
+                "parameters": [
+                    {
+                        "description": "批次 ID",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_dto.CalculatePresettlementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/reconciliations": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "reconciliations"
+                ],
+                "summary": "对账记录列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/reconciliations/daily": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回当日总笔数、总金额、成功/失败笔数",
+                "tags": [
+                    "reconciliations"
+                ],
+                "summary": "日终对账",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "调用方 ID",
+                        "name": "client_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/settlements": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "settlements"
+                ],
+                "summary": "结算单列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/settlements/submit": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "确认预结算后生成唯一结算单号并返回凭证信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settlements"
+                ],
+                "summary": "正式结算",
+                "parameters": [
+                    {
+                        "description": "预结算 ID",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_dto.SubmitSettlementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/settlements/{settlement_no}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "settlements"
+                ],
+                "summary": "结算单详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "结算单号",
+                        "name": "settlement_no",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/settlements/{settlement_no}/reverse": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "结算当日全额回退",
+                "tags": [
+                    "settlements"
+                ],
+                "summary": "结算冲正",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "结算单号",
+                        "name": "settlement_no",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_blueship581_gbinsureapi_internal_dto.AdminLoginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_blueship581_gbinsureapi_internal_dto.CalculatePresettlementRequest": {
+            "type": "object",
+            "required": [
+                "batch_id"
+            ],
+            "properties": {
+                "batch_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_blueship581_gbinsureapi_internal_dto.CreateClientRequest": {
+            "type": "object",
+            "required": [
+                "client_type",
+                "name",
+                "role"
+            ],
+            "properties": {
+                "client_type": {
+                    "type": "string",
+                    "enum": [
+                        "HIS",
+                        "THIRD_PARTY"
+                    ]
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "rate_limit_qps": {
+                    "type": "integer",
+                    "maximum": 1000,
+                    "minimum": 1
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_blueship581_gbinsureapi_internal_dto.FeeItemDTO": {
+            "type": "object",
+            "required": [
+                "item_code",
+                "item_name",
+                "item_type",
+                "medical_category"
+            ],
+            "properties": {
+                "item_code": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "item_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "item_type": {
+                    "type": "string",
+                    "enum": [
+                        "drug",
+                        "treatment",
+                        "consumable",
+                        "exam"
+                    ]
+                },
+                "medical_category": {
+                    "type": "string",
+                    "enum": [
+                        "class_a",
+                        "class_b",
+                        "class_c"
+                    ]
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "self_pay_ratio": {
+                    "type": "number",
+                    "maximum": 1,
+                    "minimum": 0
+                },
+                "unit_price": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "github_com_blueship581_gbinsureapi_internal_dto.SubmitSettlementRequest": {
+            "type": "object",
+            "required": [
+                "presettlement_id"
+            ],
+            "properties": {
+                "presettlement_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_blueship581_gbinsureapi_internal_dto.UpdateClientStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "disabled"
+                    ]
+                }
+            }
+        },
+        "github_com_blueship581_gbinsureapi_internal_dto.UploadFeesRequest": {
+            "type": "object",
+            "required": [
+                "client_id",
+                "insured_person_id",
+                "items"
+            ],
+            "properties": {
+                "client_id": {
+                    "type": "integer"
+                },
+                "insured_person_id": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_blueship581_gbinsureapi_internal_dto.FeeItemDTO"
+                    }
+                }
+            }
+        },
+        "github_com_blueship581_gbinsureapi_internal_dto.VerifyRequest": {
+            "type": "object",
+            "required": [
+                "id_card_no",
+                "medical_card_no"
+            ],
+            "properties": {
+                "id_card_no": {
+                    "type": "string"
+                },
+                "medical_card_no": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_blueship581_gbinsureapi_internal_util.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "X-API-Key",
+            "in": "header"
+        },
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

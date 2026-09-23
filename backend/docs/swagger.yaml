@@ -1,0 +1,567 @@
+basePath: /api/v1
+definitions:
+  github_com_blueship581_gbinsureapi_internal_dto.AdminLoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  github_com_blueship581_gbinsureapi_internal_dto.CalculatePresettlementRequest:
+    properties:
+      batch_id:
+        type: integer
+    required:
+    - batch_id
+    type: object
+  github_com_blueship581_gbinsureapi_internal_dto.CreateClientRequest:
+    properties:
+      client_type:
+        enum:
+        - HIS
+        - THIRD_PARTY
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      rate_limit_qps:
+        maximum: 1000
+        minimum: 1
+        type: integer
+      role:
+        type: string
+    required:
+    - client_type
+    - name
+    - role
+    type: object
+  github_com_blueship581_gbinsureapi_internal_dto.FeeItemDTO:
+    properties:
+      item_code:
+        maxLength: 32
+        type: string
+      item_name:
+        maxLength: 100
+        type: string
+      item_type:
+        enum:
+        - drug
+        - treatment
+        - consumable
+        - exam
+        type: string
+      medical_category:
+        enum:
+        - class_a
+        - class_b
+        - class_c
+        type: string
+      quantity:
+        type: number
+      self_pay_ratio:
+        maximum: 1
+        minimum: 0
+        type: number
+      unit_price:
+        minimum: 0
+        type: number
+    required:
+    - item_code
+    - item_name
+    - item_type
+    - medical_category
+    type: object
+  github_com_blueship581_gbinsureapi_internal_dto.SubmitSettlementRequest:
+    properties:
+      presettlement_id:
+        type: integer
+    required:
+    - presettlement_id
+    type: object
+  github_com_blueship581_gbinsureapi_internal_dto.UpdateClientStatusRequest:
+    properties:
+      status:
+        enum:
+        - active
+        - disabled
+        type: string
+    required:
+    - status
+    type: object
+  github_com_blueship581_gbinsureapi_internal_dto.UploadFeesRequest:
+    properties:
+      client_id:
+        type: integer
+      insured_person_id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_dto.FeeItemDTO'
+        minItems: 1
+        type: array
+    required:
+    - client_id
+    - insured_person_id
+    - items
+    type: object
+  github_com_blueship581_gbinsureapi_internal_dto.VerifyRequest:
+    properties:
+      id_card_no:
+        type: string
+      medical_card_no:
+        type: string
+    required:
+    - id_card_no
+    - medical_card_no
+    type: object
+  github_com_blueship581_gbinsureapi_internal_util.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+host: localhost:19935
+info:
+  contact: {}
+  description: '为医院信息系统提供标准化的医保结算接口服务：参保人身份核验、费用上传、预结算、正式结算、结算单查询与日终对账。业务接口需 API Key（X-API-Key）与
+    JWT（Authorization: Bearer）双认证。'
+  title: 医保智能结算 API 网关
+  version: "1.0"
+paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 网关管理员登录，返回管理端 JWT（用于调用方管理接口）
+      parameters:
+      - description: 登录参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_dto.AdminLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      summary: 管理员登录
+      tags:
+      - auth
+  /api/v1/batches:
+    get:
+      parameters:
+      - description: 调用方 ID
+        in: query
+        name: client_id
+        type: integer
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 上传批次列表
+      tags:
+      - batches
+  /api/v1/batches/{id}:
+    get:
+      parameters:
+      - description: 批次 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 批次详情
+      tags:
+      - batches
+  /api/v1/clients:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - BearerAuth: []
+      summary: 调用方列表
+      tags:
+      - clients
+    post:
+      consumes:
+      - application/json
+      description: 注册 HIS/第三方调用方，返回明文 API Key（仅此一次）
+      parameters:
+      - description: 调用方参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_dto.CreateClientRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建调用方
+      tags:
+      - clients
+  /api/v1/clients/{id}/status:
+    put:
+      parameters:
+      - description: 调用方 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 状态
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_dto.UpdateClientStatusRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新调用方状态
+      tags:
+      - clients
+  /api/v1/clients/token:
+    post:
+      consumes:
+      - application/json
+      description: 调用方使用 X-API-Key 换取服务 JWT（业务接口需 API Key + JWT 双认证）
+      parameters:
+      - description: API Key
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      summary: 换取服务令牌
+      tags:
+      - clients
+  /api/v1/clients/verify:
+    post:
+      consumes:
+      - application/json
+      description: 接收身份证号与医保卡号，返回参保状态、参保地、医保类型、个人账户余额
+      parameters:
+      - description: 核验参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_dto.VerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 参保人身份核验
+      tags:
+      - insured
+  /api/v1/fees/items:
+    get:
+      parameters:
+      - description: 批次 ID
+        in: query
+        name: batch_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 批次费用明细
+      tags:
+      - fees
+  /api/v1/fees/upload:
+    post:
+      consumes:
+      - application/json
+      description: 接收就诊费用明细，校验格式与重复性，生成上传批次号
+      parameters:
+      - description: 费用明细
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_dto.UploadFeesRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 费用明细上传
+      tags:
+      - fees
+  /api/v1/insured-persons:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 参保人列表
+      tags:
+      - insured
+  /api/v1/presettlements:
+    get:
+      parameters:
+      - description: 批次 ID
+        in: query
+        name: batch_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 批次预结算记录
+      tags:
+      - presettlements
+  /api/v1/presettlements/calculate:
+    post:
+      consumes:
+      - application/json
+      description: 按医保目录与参保地政策返回分项明细，支持多次比对
+      parameters:
+      - description: 批次 ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_dto.CalculatePresettlementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 预结算计算
+      tags:
+      - presettlements
+  /api/v1/reconciliations:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 对账记录列表
+      tags:
+      - reconciliations
+  /api/v1/reconciliations/daily:
+    get:
+      description: 返回当日总笔数、总金额、成功/失败笔数
+      parameters:
+      - description: 调用方 ID
+        in: query
+        name: client_id
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 日终对账
+      tags:
+      - reconciliations
+  /api/v1/settlements:
+    get:
+      parameters:
+      - description: 状态
+        in: query
+        name: status
+        type: string
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 结算单列表
+      tags:
+      - settlements
+  /api/v1/settlements/{settlement_no}:
+    get:
+      parameters:
+      - description: 结算单号
+        in: path
+        name: settlement_no
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 结算单详情
+      tags:
+      - settlements
+  /api/v1/settlements/{settlement_no}/reverse:
+    post:
+      description: 结算当日全额回退
+      parameters:
+      - description: 结算单号
+        in: path
+        name: settlement_no
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 结算冲正
+      tags:
+      - settlements
+  /api/v1/settlements/submit:
+    post:
+      consumes:
+      - application/json
+      description: 确认预结算后生成唯一结算单号并返回凭证信息
+      parameters:
+      - description: 预结算 ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_dto.SubmitSettlementRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_blueship581_gbinsureapi_internal_util.Response'
+      security:
+      - ApiKeyAuth: []
+      - BearerAuth: []
+      summary: 正式结算
+      tags:
+      - settlements
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
